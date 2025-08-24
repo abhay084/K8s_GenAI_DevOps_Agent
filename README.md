@@ -19,6 +19,10 @@ A powerful GenAI agent for Kubernetes cluster operations using OpenAI's function
 - **`k8s_agent.py`**: Main agent with OpenAI integration and CLI
 - **`example_usage.py`**: Usage examples and demonstrations
 
+### Architecture Diagram
+
+![Architecture Diagram](Mermaid%20Chart-2025-08-24-094404.png)
+
 ## Prerequisites
 
 1. **Kubernetes Cluster**: Access to a K8s cluster with properly configured `kubectl`
