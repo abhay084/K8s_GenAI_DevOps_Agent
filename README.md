@@ -1,6 +1,6 @@
 # Kubernetes GenAI Agent
 
-A powerful GenAI agent for Kubernetes cluster operations using OpenAI's function calling capabilities. This agent can help you manage your K8s cluster through natural language conversations.
+A powerful GenAI agent for Kubernetes cluster operations using an OpenAI-compatible function calling API (via Groq). This agent can help you manage your K8s cluster through natural language conversations.
 
 ## Features
 
@@ -26,7 +26,7 @@ A powerful GenAI agent for Kubernetes cluster operations using OpenAI's function
 ## Prerequisites
 
 1. **Kubernetes Cluster**: Access to a K8s cluster with properly configured `kubectl`
-2. **OpenAI API Key**: For the GenAI agent functionality
+2. **Groq API Key**: For the GenAI agent functionality (via OpenAI-compatible SDK)
 3. **Python 3.8+**: Required for the application
 
 ## Installation
@@ -43,7 +43,7 @@ A powerful GenAI agent for Kubernetes cluster operations using OpenAI's function
 
 3. **Set up environment variables**:
    ```bash
-   export OPENAI_API_KEY="your-openai-api-key-here"
+   export GROQ_API_KEY="your-groq-api-key-here"
    export KUBECONFIG="/path/to/your/kubeconfig"  # Optional, uses default if not set
    ```
 
@@ -61,9 +61,9 @@ Example conversation:
 ```
 💬 You: Show me all pods in the kube-system namespace
 🤖 Agent: Here are the pods in the kube-system namespace:
-- coredns-558bd4d5db-xyz123 (Running) - Ready: ✓
-- etcd-minikube (Running) - Ready: ✓  
-- kube-apiserver-minikube (Running) - Ready: ✓
+- coredns-558bd4d5db-xyz123 (Running) - Ready: Yes
+- etcd-minikube (Running) - Ready: Yes  
+- kube-apiserver-minikube (Running) - Ready: Yes
 ...
 
 💬 You: Scale my nginx deployment to 5 replicas
@@ -80,8 +80,8 @@ from k8s_agent import K8sAgent
 import os
 
 # Initialize agent
-api_key = os.getenv("OPENAI_API_KEY")
-agent = K8sAgent(api_key)
+api_key = os.getenv("GROQ_API_KEY")
+agent = K8sAgent(api_key)  # default model: "openai/gpt-oss-120b"
 
 # Chat with the agent
 response = agent.chat("List all deployments in production namespace")
@@ -112,9 +112,21 @@ The agent can handle these types of requests:
 - "What services are running?"
 - "Show all namespaces"
 
+### Create Operations
+- "Create a pod named web using image nginx:alpine in default"
+- "Create a deployment httpd with 2 replicas"
+- "Create a ClusterIP service web-svc on port 80 targeting 8080"
+- "Create a configmap app-config with keys db=postgres, mode=prod"
+- "Create a secret api-keys with key TOKEN=..."
+
 ### Scaling Operations
 - "Scale nginx deployment to 3 replicas"
 - "Scale down the api-server to 1 replica"
+
+### Update Operations
+- "Update deployment api container api to image ghcr.io/org/api:1.2.3"
+- "Update pod temp-job container job to image busybox:1.36"
+- "Update configmap app-config with new values"
 
 ### Troubleshooting
 - "Get logs from pod xyz-123"
@@ -125,6 +137,12 @@ The agent can handle these types of requests:
 - "Delete pod problematic-pod-123"
 - "Create a namespace called testing"
 - "Delete the old-project namespace"
+
+### Delete Operations
+- "Delete deployment httpd in default"
+- "Delete service web-svc in default"
+- "Delete configmap app-config in dev"
+- "Delete secret api-keys in default"
 
 ### Analysis Requests
 - "Which pods are not ready?"
@@ -138,9 +156,10 @@ The agent can handle these types of requests:
 agent = K8sAgent(api_key, kubeconfig_path="/path/to/custom/kubeconfig")
 ```
 
-### Different OpenAI Model
+### Model selection
 ```python
-agent = K8sAgent(api_key, model="gpt-3.5-turbo")
+# Default already set to a Groq model via OpenAI-compatible SDK
+agent = K8sAgent(api_key, model="openai/gpt-oss-120b")
 ```
 
 ### Custom System Prompt
@@ -166,8 +185,8 @@ agent.set_system_prompt("You are a senior DevOps engineer specializing in Kubern
 - Check KUBECONFIG environment variable
 - Verify cluster connectivity
 
-**"OpenAI API Error"**
-- Verify OPENAI_API_KEY is set correctly
+**"Groq API Error"**
+- Verify GROQ_API_KEY is set correctly
 - Check API key permissions and quota
 - Ensure internet connectivity
 
