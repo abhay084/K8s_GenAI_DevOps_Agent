@@ -1,0 +1,52 @@
+# OS
+.DS_Store
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg-info/
+dist/
+build/
+.eggs/
+.venv/
+.venv*/
+.env
+.env.*
+.python-version
+.pytest_cache/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+.cache/
+.mypy_cache/
+.ruff_cache/
+
+# IDE / Editors
+.idea/
+.vscode/
+*.swp
+
+# Logs
+logs/
+*.log
+
+# Notebooks
+.ipynb_checkpoints/
+
+# Artifacts / Media (optional)
+*.mp4
+*.mov
+
+# Kubernetes (avoid committing local configs or temp manifests)
+kubeconfig*
+*.kubeconfig
+*.tmp.yaml
+
+# Mac Finder metadata
+Icon?
+.Spotlight-V100
+.Trashes
