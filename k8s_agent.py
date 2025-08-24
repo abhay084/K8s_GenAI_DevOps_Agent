@@ -4,29 +4,13 @@ Kubernetes GenAI Agent - Main agent class for Kubernetes operations.
 
 import json
 import openai
+import os
+import re
 from typing import Dict, List, Optional, Any, Callable
 from k8s_tools import K8sTools
 
 
-class K8sAgent:
-    """GenAI Agent for Kubernetes operations using OpenAI's function calling."""
-    
-    def __init__(self, api_key: str, kubeconfig_path: Optional[str] = None, model: str = "openai/gpt-oss-120b"):
-        """
-        Initialize the K8s GenAI Agent.
-        
-        Args:
-            api_key: Groq API key
-            kubeconfig_path: Path to kubeconfig file
-            model: Groq model to use
-        """
-        self.client = openai.OpenAI(api_key=api_key, base_url="https://api.groq.com/openai/v1")
-        self.model = model
-        self.k8s_tools = K8sTools(kubeconfig_path)
-        self.conversation_history = []
-        
-        # System prompt for K8s operations
-        self.system_prompt = """You are a helpful Kubernetes operations assistant. You can help users manage their Kubernetes cluster by:
+DEFAULT_SYSTEM_PROMPT = """You are a helpful Kubernetes operations assistant. You can help users manage their Kubernetes cluster by:
 
 1. Listing and inspecting resources (pods, deployments, services, namespaces)
 2. Scaling deployments up or down
@@ -39,6 +23,57 @@ Always provide clear, concise responses using plain text formatting. Avoid speci
 When showing resource information, use simple tables with basic ASCII characters only.
 If an operation could be destructive (like deleting resources), ask for confirmation first.
 Be proactive in suggesting related operations that might be helpful."""
+
+
+def load_system_prompt(toml_path: str = "prompt/system_promtp.toml") -> str:
+    """Load system prompt from env or TOML file.
+
+    Precedence: os.environ['SYSTEM_PROMPT'] > TOML 'system_prompt' > DEFAULT_SYSTEM_PROMPT.
+    """
+    # 1) Environment variable takes precedence
+    env_prompt = os.getenv("SYSTEM_PROMPT")
+    if env_prompt:
+        return env_prompt
+
+    # 2) Try to load from TOML file if present
+    try:
+        if os.path.exists(toml_path):
+            with open(toml_path, "r", encoding="utf-8") as f:
+                content = f.read()
+            # Very simple TOML triple-quote parser for system_prompt
+            m = re.search(r"system_prompt\s*=\s*\"\"\"(.*?)\"\"\"", content, re.DOTALL)
+            if m:
+                return m.group(1).strip()
+    except Exception:
+        pass
+
+    # 3) Fallback
+    return DEFAULT_SYSTEM_PROMPT
+
+
+class K8sAgent:
+    """GenAI Agent for Kubernetes operations using OpenAI's function calling."""
+    
+    def __init__(self, api_key: str, kubeconfig_path: Optional[str] = None, model: Optional[str] = None, base_url: Optional[str] = None):
+        """
+        Initialize the K8s GenAI Agent.
+        
+        Args:
+            api_key: Groq API key
+            kubeconfig_path: Path to kubeconfig file
+            model: Groq model to use (defaults from env or "openai/gpt-oss-120b")
+            base_url: OpenAI-compatible base URL (defaults from env or Groq URL)
+        """
+        resolved_base_url = base_url or os.getenv("OPENAI_BASE_URL", "https://api.groq.com/openai/v1")
+        resolved_model = model or os.getenv("MODEL", "openai/gpt-oss-120b")
+
+        self.client = openai.OpenAI(api_key=api_key, base_url=resolved_base_url)
+        self.model = resolved_model
+        self.k8s_tools = K8sTools(kubeconfig_path)
+        self.conversation_history = []
+        
+        # System prompt for K8s operations (env > TOML > default)
+        self.system_prompt = load_system_prompt()
 
     def chat(self, user_message: str) -> str:
         """
@@ -141,9 +176,9 @@ Be proactive in suggesting related operations that might be helpful."""
 class K8sAgentCLI:
     """Command-line interface for the K8s Agent."""
     
-    def __init__(self, api_key: str, kubeconfig_path: Optional[str] = None):
+    def __init__(self, api_key: str, kubeconfig_path: Optional[str] = None, base_url: Optional[str] = None, model: Optional[str] = None):
         """Initialize CLI with agent."""
-        self.agent = K8sAgent(api_key, kubeconfig_path)
+        self.agent = K8sAgent(api_key, kubeconfig_path, model=model, base_url=base_url)
         
     def run(self):
         """Run the interactive CLI."""
@@ -223,18 +258,46 @@ def format_deployments_table(deployments: List[Dict]) -> str:
     return output
 
 
+def load_env(env_path: str = ".env") -> None:
+    """Load environment variables from a .env file if present.
+
+    Only sets keys that are not already present in os.environ.
+    Lines starting with '#' and blank lines are ignored.
+    """
+    try:
+        if not os.path.exists(env_path):
+            return
+        with open(env_path, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith("#"):
+                    continue
+                if "=" not in line:
+                    continue
+                key, value = line.split("=", 1)
+                key = key.strip()
+                value = value.strip().strip('"').strip("'")
+                if key and key not in os.environ:
+                    os.environ[key] = value
+    except Exception:
+        # Fail quietly; runtime env vars can still be provided externally
+        pass
+
+
 if __name__ == "__main__":
-    import os
-    
-    # Get OpenAI API key from environment
+    # Load from .env if available (without overriding existing env)
+    load_env()
+
+    # Get API key and configuration from environment
     api_key = os.getenv("GROQ_API_KEY")
     if not api_key:
-        print("❌ Please set GROQ_API_KEY environment variable")
+        print("❌ Please set GROQ_API_KEY environment variable or provide it in .env")
         exit(1)
-    
-    # Get kubeconfig path (optional)
+
     kubeconfig_path = os.getenv("KUBECONFIG")
-    
+    base_url = os.getenv("OPENAI_BASE_URL", "https://api.groq.com/openai/v1")
+    model = os.getenv("MODEL", "openai/gpt-oss-120b")
+
     # Run CLI
-    cli = K8sAgentCLI(api_key, kubeconfig_path)
+    cli = K8sAgentCLI(api_key, kubeconfig_path, base_url=base_url, model=model)
     cli.run()
