@@ -25,6 +25,10 @@ cp .env.example .env
 python k8s_agent.py
 ```
 
+## Demo Video
+
+[Watch on YouTube](https://www.youtube.com/watch?v=VoRt32U_sUw)
+
 ## More docs
 
 See advanced usage, configuration, and troubleshooting in `docs/ADVANCED.md`.
