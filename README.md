@@ -27,7 +27,7 @@ python k8s_agent.py
 
 ## Demo Video
 
-[Watch on YouTube](https://www.youtube.com/watch?v=VoRt32U_sUw)
+[Watch on YouTube](https://www.youtube.com/watch?v=_yoSeKC-zwI)
 
 ## More docs
 
